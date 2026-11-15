@@ -28,6 +28,7 @@ public class EarthSettingsScreen extends Screen {
 
 	private final Screen parent;
 	private final Consumer<EarthSettings> onApply;
+	private final boolean earthActive;
 	private Tab tab = Tab.REGION;
 
 	// ---- working copies of every setting (records are immutable) ----
@@ -60,10 +61,11 @@ public class EarthSettingsScreen extends Screen {
 	private int rowY;
 	private TextFieldWidget scaleField;
 
-	public EarthSettingsScreen(Screen parent, EarthSettings initial, Consumer<EarthSettings> onApply) {
+	public EarthSettingsScreen(Screen parent, EarthSettings initial, boolean earthActive, Consumer<EarthSettings> onApply) {
 		super(Text.literal("Earth Generation Settings"));
 		this.parent = parent;
 		this.onApply = onApply;
+		this.earthActive = earthActive;
 		load(initial);
 	}
 
@@ -123,6 +125,9 @@ public class EarthSettingsScreen extends Screen {
 			tx += tabW + 4;
 		}
 
+		if (!earthActive) {
+			infoLines.add("Earth world type is not selected here, so Apply saves these as the defaults for your next Earth world.");
+		}
 		rowY = 56;
 		switch (tab) {
 			case REGION -> buildRegionTab(contentLeft);

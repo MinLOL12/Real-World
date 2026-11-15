@@ -51,6 +51,24 @@ public class EarthChunkGenerator extends ChunkGenerator {
 	private static final java.util.concurrent.atomic.AtomicBoolean LOGGED_ONCE = new java.util.concurrent.atomic.AtomicBoolean();
 
 	private EarthSettings settings;
+	private final long createdNanos = System.nanoTime();
+
+	/**
+	 * If the player pressed Apply in the Earth settings screen after this
+	 * generator instance was created (the usual create-world flow: the
+	 * preset instance is built when the world type is clicked, before the
+	 * settings screen opens), adopt those pending settings. Generators
+	 * decoded later from an existing world are younger than the pending
+	 * timestamp, so saved worlds are never retroactively changed.
+	 */
+	private void adoptPending() {
+		EarthSettings pendingSettings = EarthConfig.getPending();
+		if (pendingSettings == null || pendingSettings == settings) return;
+		if (EarthConfig.getPendingNanos() <= createdNanos) return;
+		if (settings.equals(EarthSettings.DEFAULT) || settings == EarthConfig.getDiskLoaded()) {
+			settings = pendingSettings;
+		}
+	}
 
 	public EarthChunkGenerator(BiomeSource biomeSource, EarthSettings settings) {
 		super(biomeSource);
@@ -66,6 +84,7 @@ public class EarthChunkGenerator extends ChunkGenerator {
 	}
 
 	public EarthSettings getSettings() {
+		adoptPending();
 		return settings;
 	}
 
@@ -92,11 +111,13 @@ public class EarthChunkGenerator extends ChunkGenerator {
 
 	@Override
 	public int getSeaLevel() {
+		adoptPending();
 		return settings.terrain().seaLevel();
 	}
 
 	@Override
 	public int getHeight(int x, int z, Heightmap.Type type, HeightLimitView world, NoiseConfig noiseConfig) {
+		adoptPending();
 		EarthTerrain.Column c = EarthTerrain.column(settings, x, z);
 		if (type == Heightmap.Type.MOTION_BLOCKING && c.groundY() < c.seaLevel()
 				&& EarthTerrain.shouldFillWater(settings, c)) {
@@ -129,6 +150,7 @@ public class EarthChunkGenerator extends ChunkGenerator {
 	@Override
 	public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig,
 												  StructureAccessor structureAccessor, Chunk chunk) {
+		adoptPending();
 		BlockPos.Mutable mutable = new BlockPos.Mutable();
 		int baseX = chunk.getPos().x * 16;
 		int baseZ = chunk.getPos().z * 16;
@@ -171,6 +193,7 @@ public class EarthChunkGenerator extends ChunkGenerator {
 
 	@Override
 	public void buildSurface(ChunkRegion region, StructureAccessor structures, NoiseConfig noiseConfig, Chunk chunk) {
+		adoptPending();
 		BlockPos.Mutable mutable = new BlockPos.Mutable();
 		int baseX = chunk.getPos().x * 16;
 		int baseZ = chunk.getPos().z * 16;
@@ -242,6 +265,7 @@ public class EarthChunkGenerator extends ChunkGenerator {
 	@Override
 	public void generateFeatures(StructureWorldAccess world, Chunk chunk,
 								 StructureAccessor structureAccessor) {
+		adoptPending();
 		super.generateFeatures(world, chunk, structureAccessor); // vanilla biome features (flowers, ores are elsewhere)
 		int baseX = chunk.getPos().x * 16;
 		int baseZ = chunk.getPos().z * 16;

@@ -26,6 +26,11 @@ public final class EarthConfig {
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static EarthSettings override;
+	/** The exact object read from disk by load(), used as an identity marker. */
+	private static EarthSettings diskLoaded;
+	/** Settings saved during this session (e.g. via Apply in the Earth screen). */
+	private static volatile EarthSettings pending;
+	private static volatile long pendingNanos;
 
 	public static Path configPath() {
 		return FabricLoader.getInstance().getConfigDir().resolve("realworld.json");
@@ -41,6 +46,7 @@ public final class EarthConfig {
 					err -> RealWorldMod.LOGGER.warn("RealWorld: could not parse config: {}", err)
 			).ifPresent(parsed -> {
 				override = parsed;
+				diskLoaded = parsed;
 				RealWorldMod.LOGGER.info("RealWorld: loaded Earth settings from {}", path);
 			});
 		} catch (Exception e) {
@@ -50,6 +56,8 @@ public final class EarthConfig {
 
 	public static void save(EarthSettings settings) {
 		override = settings;
+		pending = settings;
+		pendingNanos = System.nanoTime();
 		try {
 			Path path = configPath();
 			Files.createDirectories(path.getParent());
@@ -63,6 +71,20 @@ public final class EarthConfig {
 	private static void writeQuietly(Path path, String text) {
 		try { Files.writeString(path, text); }
 		catch (Exception e) { RealWorldMod.LOGGER.warn("RealWorld: failed to write config: {}", e.getMessage()); }
+	}
+
+	/** Settings saved this session, to be adopted by newly created Earth worlds. */
+	public static EarthSettings getPending() {
+		return pending;
+	}
+
+	public static long getPendingNanos() {
+		return pendingNanos;
+	}
+
+	/** The exact object that was loaded from disk (identity marker), or null. */
+	public static EarthSettings getDiskLoaded() {
+		return diskLoaded;
 	}
 
 	/** The settings the UI should start from (last used, or the defaults). */
