@@ -15,7 +15,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.ChunkRegion;
 import net.minecraft.world.HeightLimitView;
 import net.minecraft.world.Heightmap;
-import net.minecraft.world.StructureAccessor;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.chunk.Chunk;
@@ -23,7 +22,8 @@ import net.minecraft.world.StructureWorldAccess;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.chunk.Blender;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
-import net.minecraft.world.gen.chunk.VerticalSurfaceType;
+import net.minecraft.world.gen.StructureAccessor;
+import net.minecraft.world.gen.chunk.VerticalBlockSample;
 import net.minecraft.world.gen.noise.NoiseConfig;
 
 import java.util.List;
@@ -70,11 +70,6 @@ public class EarthChunkGenerator extends ChunkGenerator {
 		return CODEC;
 	}
 
-	@Override
-	public ChunkGenerator withSeed(long seed) {
-		return new EarthChunkGenerator(getBiomeSource(), settings);
-	}
-
 	// ------------------------------------------------------------ heights
 	@Override
 	public int getWorldHeight() {
@@ -102,7 +97,7 @@ public class EarthChunkGenerator extends ChunkGenerator {
 	}
 
 	@Override
-	public VerticalSurfaceType getColumnSample(int x, int z, HeightLimitView world, NoiseConfig noiseConfig) {
+	public VerticalBlockSample getColumnSample(int x, int z, HeightLimitView world, NoiseConfig noiseConfig) {
 		EarthTerrain.Column c = EarthTerrain.column(settings, x, z);
 		BlockState[] column = new BlockState[getWorldHeight()];
 		for (int i = 0; i < column.length; i++) {
@@ -112,7 +107,7 @@ public class EarthChunkGenerator extends ChunkGenerator {
 			else if (y <= c.seaLevel() && EarthTerrain.shouldFillWater(settings, c)) column[i] = Blocks.WATER.getDefaultState();
 			else column[i] = Blocks.AIR.getDefaultState();
 		}
-		return new VerticalSurfaceType(getMinimumY(), column);
+		return new VerticalBlockSample(getMinimumY(), column);
 	}
 
 	@Override
@@ -222,8 +217,8 @@ public class EarthChunkGenerator extends ChunkGenerator {
 	}
 
 	@Override
-	public void carve(ChunkRegion chunkRegion, long seed, BiomeAccess biomeAccess, StructureAccessor structureAccessor,
-					  Chunk chunk, GenerationStep.Carver carverStep) {
+	public void carve(ChunkRegion chunkRegion, long seed, NoiseConfig noiseConfig, BiomeAccess biomeAccess,
+					  StructureAccessor structureAccessor, Chunk chunk, GenerationStep.Carver carverStep) {
 		// No caves: real terrain fidelity matters more, and carvers would
 		// happily slice through imported buildings and lake beds.
 	}

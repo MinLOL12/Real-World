@@ -63,7 +63,7 @@ public final class OsmService {
 		return tile;
 	}
 
-	static SurfaceKind kindAt(RasterTile tile, int blockX, int blockZ) {
+	public static SurfaceKind kindAt(RasterTile tile, int blockX, int blockZ) {
 		int lx = Math.floorMod(blockX, TILE_BLOCKS);
 		int lz = Math.floorMod(blockZ, TILE_BLOCKS);
 		return SurfaceKind.values()[tile.kinds[lz * TILE_BLOCKS + lx]];
