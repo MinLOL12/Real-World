@@ -54,7 +54,9 @@ jobs:
           {
             echo "Gradle build failed (run $GITHUB_RUN_ID, commit $GITHUB_SHA)"
             echo '```text'
-            tail -250 build-output.txt
+            grep -E "\.java:[0-9]+:|error:|What went wrong|Execution failed|> Compilation failed" build-output.txt | head -120
+            echo '--- tail ---'
+            tail -40 build-output.txt
             echo '```'
           } > build-report.md
           gh issue create --title "CI build log for run $GITHUB_RUN_ID" --body-file build-report.md || true
