@@ -50,15 +50,13 @@ public final class ElevationService {
 		TileKey key = new TileKey(settingsKey(settings), tileX, tileZ);
 		double[][] grid = CACHE.get(key);
 		if (grid == null) {
-			synchronized (ElevationService.class) {
-				grid = CACHE.get(key);
-				if (grid == null) {
-					grid = loadTile(settings, tileX, tileZ);
-					applySmoothing(grid, settings.terrain().smoothing());
-					if (CACHE.size() > 512) CACHE.clear();
-					CACHE.put(key, grid);
-				}
-			}
+			// Loaded outside any lock (parallel worldgen threads); a duplicate
+			// fetch for the same tile is harmless and discarded via putIfAbsent.
+			grid = loadTile(settings, tileX, tileZ);
+			applySmoothing(grid, settings.terrain().smoothing());
+			if (CACHE.size() > 512) CACHE.clear();
+			double[][] previous = CACHE.putIfAbsent(key, grid);
+			if (previous != null) grid = previous;
 		}
 		// Bilinear interpolation inside the tile.
 		double localX = (blockX - (double) tileX * TILE_BLOCKS) / SPACING;

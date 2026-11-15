@@ -89,19 +89,17 @@ public final class OsmService {
 		SuperKey key = new SuperKey(settingsKey(settings), sx, sz);
 		OsmDataset data = SUPER_CACHE.get(key);
 		if (data == null) {
-			synchronized (OsmService.class) {
-				data = SUPER_CACHE.get(key);
-				if (data == null) {
-					// Convert the super-tile's block bounds to a lat/lon bbox (+ margin).
-					double[] a = GeoMath.blockToLatLon(settings, sx * (double) SUPER_BLOCKS - 32, sz * (double) SUPER_BLOCKS + SUPER_BLOCKS + 32);
-					double[] b = GeoMath.blockToLatLon(settings, sx * (double) SUPER_BLOCKS + SUPER_BLOCKS + 32, sz * (double) SUPER_BLOCKS - 32);
-					double minLat = Math.min(a[0], b[0]), maxLat = Math.max(a[0], b[0]);
-					double minLon = Math.min(a[1], b[1]), maxLon = Math.max(a[1], b[1]);
-					data = OsmClient.fetch(settings, minLat, minLon, maxLat, maxLon);
-					if (SUPER_CACHE.size() > 256) SUPER_CACHE.clear();
-					SUPER_CACHE.put(key, data);
-				}
-			}
+			// Convert the super-tile's block bounds to a lat/lon bbox (+ margin).
+			// Fetched outside any lock so worldgen worker threads load
+			// neighbouring super-tiles in parallel; putIfAbsent keeps one copy.
+			double[] a = GeoMath.blockToLatLon(settings, sx * (double) SUPER_BLOCKS - 32, sz * (double) SUPER_BLOCKS + SUPER_BLOCKS + 32);
+			double[] b = GeoMath.blockToLatLon(settings, sx * (double) SUPER_BLOCKS + SUPER_BLOCKS + 32, sz * (double) SUPER_BLOCKS - 32);
+			double minLat = Math.min(a[0], b[0]), maxLat = Math.max(a[0], b[0]);
+			double minLon = Math.min(a[1], b[1]), maxLon = Math.max(a[1], b[1]);
+			data = OsmClient.fetch(settings, minLat, minLon, maxLat, maxLon);
+			if (SUPER_CACHE.size() > 256) SUPER_CACHE.clear();
+			OsmDataset previous = SUPER_CACHE.putIfAbsent(key, data);
+			if (previous != null) data = previous;
 		}
 		return data;
 	}

@@ -40,7 +40,7 @@ final class OsmClient {
 			"https://overpass.kumi.systems/api/interpreter"
 	};
 	private static final HttpClient HTTP = HttpClient.newBuilder()
-			.connectTimeout(Duration.ofSeconds(15))
+			.connectTimeout(Duration.ofSeconds(10))
 			.build();
 
 	static OsmDataset fetch(EarthSettings settings, double minLat, double minLon, double maxLat, double maxLon) {
@@ -60,7 +60,7 @@ final class OsmClient {
 	}
 
 	private static String download(String bbox) throws Exception {
-		String query = "[out:json][timeout:60];\n"
+		String query = "[out:json][timeout:30];\n"
 				+ "(\n"
 				+ "  way[\"building\"](" + bbox + ");\n"
 				+ "  way[\"highway\"](" + bbox + ");\n"
@@ -78,7 +78,7 @@ final class OsmClient {
 		for (String endpoint : ENDPOINTS) {
 			try {
 				HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
-						.timeout(Duration.ofSeconds(90))
+						.timeout(Duration.ofSeconds(35))
 						.header("User-Agent", "RealWorld-Fabric-Mod/1.0 (Minecraft Earth import; OSM data (c) OpenStreetMap contributors)")
 						.header("Content-Type", "application/x-www-form-urlencoded")
 						.POST(HttpRequest.BodyPublishers.ofString(body))

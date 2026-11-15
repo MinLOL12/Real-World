@@ -102,10 +102,10 @@ jobs:
           spawn-protection=0
           EOF
 
-      - name: Boot server and generate spawn (max 5 minutes)
+      - name: Boot server and generate spawn (max 8 minutes)
         run: |
           set +e
-          timeout 300 ./gradlew runServer > server-log.txt 2>&1
+          timeout 480 ./gradlew runServer > server-log.txt 2>&1
           echo "server exit code: $?"
           tail -30 server-log.txt
 
