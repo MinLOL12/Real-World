@@ -44,6 +44,21 @@ jobs:
           fi
           exit $code
 
+      # Temporary diagnostics: publish the tail of a failed build as an issue
+      # so the log can be inspected where raw run logs are unavailable.
+      - name: Report failed build log
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Gradle build failed (run $GITHUB_RUN_ID, commit $GITHUB_SHA)"
+            echo '```text'
+            tail -250 build-output.txt
+            echo '```'
+          } > build-report.md
+          gh issue create --title "CI build log for run $GITHUB_RUN_ID" --body-file build-report.md || true
+
       - name: Show built jars
         run: ls -la build/libs
 
