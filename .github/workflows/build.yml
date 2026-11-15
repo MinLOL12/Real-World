@@ -11,7 +11,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   build:
@@ -44,23 +43,6 @@ jobs:
           fi
           exit $code
 
-      # Temporary diagnostics: publish the tail of a failed build as an issue
-      # so the log can be inspected where raw run logs are unavailable.
-      - name: Report failed build log
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          {
-            echo "Gradle build failed (run $GITHUB_RUN_ID, commit $GITHUB_SHA)"
-            echo '```text'
-            grep -E "\.java:[0-9]+:|error:|What went wrong|Execution failed|> Compilation failed" build-output.txt | head -120
-            echo '--- tail ---'
-            tail -40 build-output.txt
-            echo '```'
-          } > build-report.md
-          gh issue create --title "CI build log for run $GITHUB_RUN_ID" --body-file build-report.md || true
-
       - name: Show built jars
         run: ls -la build/libs
 
@@ -74,3 +56,77 @@ jobs:
           path: build/libs/*.jar
           retention-days: 90
           if-no-files-found: error
+
+  # Boots a headless dedicated server with level-type=realworld:earth and
+  # generates spawn chunks. This exercises the world preset JSON, the Earth
+  # chunk generator codec, elevation/OSM fallbacks and chunk generation
+  # end-to-end (things javac alone cannot check).
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare server files
+        run: |
+          mkdir -p run run/config
+          echo "eula=true" > run/eula.txt
+          # Same shape as the preset settings, but with offline procedural
+          # elevation so the smoke test does not depend on external APIs.
+          cat > run/config/realworld.json <<'EOF'
+          {
+            "region": {"center_lat": 40.7128, "center_lon": -74.006, "scale_denominator": 1, "selection_mode": "box", "import_size_km": 2.0, "outside_region": "ocean", "min_lat": 40.70375, "max_lat": 40.72185, "min_lon": -74.01785, "max_lon": -73.99415, "polygon_lats": [], "polygon_lons": []},
+            "terrain": {"elevation_source": "procedural", "elevation_exaggeration": 1.0, "sea_level": 62, "smoothing": 1, "rocky_cliffs": true},
+            "nature": {"trees": true, "tree_density": 35, "vegetation": true, "beaches": true, "snow": true},
+            "water": {"oceans": true, "rivers": true, "lakes": true, "water_depth": 3, "wetlands": true},
+            "structures": {"buildings": true, "building_height_scale": 1.0, "building_style": "concrete", "roads": true, "road_width_scale": 1.0, "farmland": true}
+          }
+          EOF
+          cat > run/server.properties <<'EOF'
+          level-name=world
+          level-type=realworld:earth
+          online-mode=false
+          generate-structures=true
+          view-distance=4
+          simulation-distance=4
+          spawn-protection=0
+          EOF
+
+      - name: Boot server and generate spawn (max 5 minutes)
+        run: |
+          set +e
+          timeout 300 ./gradlew runServer > server-log.txt 2>&1
+          echo "server exit code: $?"
+          tail -30 server-log.txt
+
+      - name: Verify Earth world generated
+        run: |
+          echo "--- RealWorld / Earth lines ---"
+          grep -iE "realworld|earth" server-log.txt | head -20 || true
+          echo "--- preparation / done lines ---"
+          grep -iE "Preparing level|Preparing start region|Done \(|Starting minecraft server" server-log.txt | head -10 || true
+          test -f run/world/level.dat && echo "level.dat exists: OK"
+          grep -q "RealWorld initialised" server-log.txt
+          grep -q "Earth generator active" server-log.txt
+          grep -qE "Done \([0-9.]+s\)!" server-log.txt
+          python3 - <<'PYEOF'
+          import gzip, sys
+          data = gzip.open('run/world/level.dat','rb').read()
+          assert b'realworld:earth' in data, 'level.dat does not reference the realworld:earth generator!'
+          print('level.dat references realworld:earth generator: OK')
+          PYEOF
+          if grep -qiE "Failed to load datapack|Couldn't parse|Failed to parse|Invalid or missing recipe|ERROR.*realworld" server-log.txt; then
+            echo "Suspicious datapack/parse errors found:"
+            grep -iE "Failed to load datapack|Couldn't parse|Failed to parse|ERROR.*realworld" server-log.txt | head -20
+            exit 1
+          fi
+          echo "SMOKE TEST PASSED"

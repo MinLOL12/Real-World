@@ -47,6 +47,9 @@ public class EarthChunkGenerator extends ChunkGenerator {
 			EarthSettings.CODEC.fieldOf("settings").forGetter(EarthChunkGenerator::getSettings)
 	).apply(instance, EarthChunkGenerator::new));
 
+	private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("realworld");
+	private static final java.util.concurrent.atomic.AtomicBoolean LOGGED_ONCE = new java.util.concurrent.atomic.AtomicBoolean();
+
 	private EarthSettings settings;
 
 	public EarthChunkGenerator(BiomeSource biomeSource, EarthSettings settings) {
@@ -54,6 +57,12 @@ public class EarthChunkGenerator extends ChunkGenerator {
 		// A config-file override (config/realworld.json) replaces the preset
 		// defaults - this is how dedicated servers choose their Earth area.
 		this.settings = EarthConfig.applyOverride(settings);
+		if (LOGGED_ONCE.compareAndSet(false, true)) {
+			LOGGER.info("RealWorld Earth generator active: centre {}, {} | scale 1:{} | selection {} | buildings {} | roads {}",
+					this.settings.region().centerLat(), this.settings.region().centerLon(),
+					this.settings.region().scale(), this.settings.region().selectionMode(),
+					this.settings.structures().buildings(), this.settings.structures().roads());
+		}
 	}
 
 	public EarthSettings getSettings() {
