@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   build:
@@ -130,3 +131,20 @@ jobs:
             exit 1
           fi
           echo "SMOKE TEST PASSED"
+
+      # Temporary diagnostics: publish the server log tail as an issue so it
+      # can be inspected where raw run logs are unavailable.
+      - name: Report smoke-test log
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Smoke test failed (run $GITHUB_RUN_ID, commit $GITHUB_SHA)"
+            echo '```text'
+            grep -iE "realworld|earth|error|exception|failed|caused|Preparing|Done \(|level-type" server-log.txt | head -80
+            echo '--- tail ---'
+            tail -60 server-log.txt
+            echo '```'
+          } > smoke-report.md
+          gh issue create --title "CI smoke-test log for run $GITHUB_RUN_ID" --body-file smoke-report.md || true
