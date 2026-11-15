@@ -26,8 +26,9 @@ public class RealWorldClient implements ClientModInitializer {
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (openSettingsKey.wasPressed()) {
-				if (client.currentScreen == null) {
-					client.setScreen(new EarthSettingsScreen(null, EarthConfig.current(), settings -> {
+				if (client.currentScreen == null || client.currentScreen instanceof net.minecraft.client.gui.screen.TitleScreen) {
+					net.minecraft.client.gui.screen.Screen parentScreen = client.currentScreen;
+					client.setScreen(new EarthSettingsScreen(parentScreen, EarthConfig.current(), false, settings -> {
 						EarthConfig.save(settings);
 						if (client.player != null) {
 							client.player.sendMessage(Text.literal(

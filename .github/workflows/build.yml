@@ -47,7 +47,7 @@ jobs:
         run: ls -la build/libs
 
       # The file you want in-game is the remapped jar:
-      #   realworld-1.0.0.jar        <-- put this in your mods folder
+      #   realworld-1.0.1.jar        <-- put this in your mods folder
       # (the -dev and -sources jars are for developers only)
       - name: Upload mod jar
         uses: actions/upload-artifact@v4

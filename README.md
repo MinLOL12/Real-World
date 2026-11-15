@@ -19,14 +19,14 @@ This repo has a GitHub Actions workflow that builds the jar for you:
 1. Push to GitHub (or open the **Actions** tab → **Build mod jar** → **Run workflow**).
 2. Wait for the run to go green.
 3. Download the **RealWorld-mod-jar** artifact from the run summary.
-4. Put **`realworld-1.0.0.jar`** (not the `-dev` / `-sources` jars) into your
+4. Put **`realworld-1.0.1.jar`** (not the `-dev` / `-sources` jars) into your
    Minecraft `mods` folder, together with **Fabric Loader 1.20.1** and **Fabric API**.
 
 To build locally instead (needs Java 17):
 
 ```bash
 ./gradlew build        # Windows: gradlew.bat build
-# jar ends up in build/libs/realworld-1.0.0.jar
+# jar ends up in build/libs/realworld-1.0.1.jar
 ```
 
 ## How to use
