@@ -57,10 +57,10 @@ public abstract class CreateWorldScreenMixin extends Screen {
 	@Unique
 	private EarthChunkGenerator realworld$earthGenerator() {
 		try {
-			if (worldCreator == null || worldCreator.getGeneratorOptions() == null) return null;
-			LevelStem stem = worldCreator.getGeneratorOptions().getDimensions().get(LevelStem.OVERWORLD);
-			if (stem == null) return null;
-			ChunkGenerator generator = stem.generator();
+			if (worldCreator == null || worldCreator.getGeneratorOptionsHolder() == null) return null;
+			DimensionOptions options = worldCreator.getGeneratorOptionsHolder().dimensionOptionsRegistry().get(DimensionOptions.OVERWORLD);
+			if (options == null) return null;
+			ChunkGenerator generator = options.chunkGenerator();
 			if (generator instanceof EarthChunkGenerator earth) return earth;
 		} catch (Throwable ignored) {
 			// If vanilla internals shift, the button simply stays hidden.
