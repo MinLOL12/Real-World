@@ -1,0 +1,80 @@
+{
+	"dimensions": {
+		"minecraft:overworld": {
+			"type": "minecraft:overworld",
+			"generator": {
+				"type": "realworld:earth",
+				"biome_source": {
+					"type": "minecraft:multi_noise",
+					"preset": "minecraft:overworld"
+				},
+				"settings": {
+					"region": {
+						"center_lat": 40.7128,
+						"center_lon": -74.0060,
+						"scale_denominator": 1,
+						"selection_mode": "box",
+						"import_size_km": 2.0,
+						"outside_region": "ocean",
+						"min_lat": 40.70375,
+						"max_lat": 40.72185,
+						"min_lon": -74.01785,
+						"max_lon": -73.99415,
+						"polygon_lats": [],
+						"polygon_lons": []
+					},
+					"terrain": {
+						"elevation_source": "auto_remote",
+						"elevation_exaggeration": 1.0,
+						"sea_level": 62,
+						"smoothing": 1,
+						"rocky_cliffs": true
+					},
+					"nature": {
+						"trees": true,
+						"tree_density": 35,
+						"vegetation": true,
+						"beaches": true,
+						"snow": true
+					},
+					"water": {
+						"oceans": true,
+						"rivers": true,
+						"lakes": true,
+						"water_depth": 3,
+						"wetlands": true
+					},
+					"structures": {
+						"buildings": true,
+						"building_height_scale": 1.0,
+						"building_style": "concrete",
+						"roads": true,
+						"road_width_scale": 1.0,
+						"farmland": true
+					}
+				}
+			}
+		},
+		"minecraft:the_nether": {
+			"type": "minecraft:the_nether",
+			"generator": {
+				"type": "minecraft:noise",
+				"biome_source": {
+					"type": "minecraft:multi_noise",
+					"preset": "minecraft:nether"
+				},
+				"settings": "minecraft:nether"
+			}
+		},
+		"minecraft:the_end": {
+			"type": "minecraft:the_end",
+			"generator": {
+				"type": "minecraft:noise",
+				"biome_source": {
+					"type": "minecraft:the_end"
+				},
+				"settings": "minecraft:end"
+			}
+		}
+	}
+}

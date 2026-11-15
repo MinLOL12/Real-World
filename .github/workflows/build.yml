@@ -1,0 +1,132 @@
+name: Build mod jar
+
+# Builds the Fabric mod jar on every push / pull request and stores it as a
+# downloadable artifact. You can also run it manually from the Actions tab
+# (workflow_dispatch) and grab the jar from the run summary afterwards.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build with Gradle
+        run: |
+          set +e
+          ./gradlew build --stacktrace 2>&1 | tee build-output.txt
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            {
+              echo '## Gradle build failed - relevant output'
+              echo '```text'
+              grep -E "error:|warning:|FAILED|What went wrong|Execution failed|Caused by|\.java" build-output.txt | head -150
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit $code
+
+      - name: Show built jars
+        run: ls -la build/libs
+
+      # The file you want in-game is the remapped jar:
+      #   realworld-1.0.0.jar        <-- put this in your mods folder
+      # (the -dev and -sources jars are for developers only)
+      - name: Upload mod jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: RealWorld-mod-jar
+          path: build/libs/*.jar
+          retention-days: 90
+          if-no-files-found: error
+
+  # Boots a headless dedicated server with level-type=realworld:earth and
+  # generates spawn chunks. This exercises the world preset JSON, the Earth
+  # chunk generator codec, elevation/OSM fallbacks and chunk generation
+  # end-to-end (things javac alone cannot check).
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare server files
+        run: |
+          mkdir -p run run/config
+          echo "eula=true" > run/eula.txt
+          # Same shape as the preset settings, but with offline procedural
+          # elevation so the smoke test does not depend on external APIs.
+          cat > run/config/realworld.json <<'EOF'
+          {
+            "region": {"center_lat": 40.7128, "center_lon": -74.006, "scale_denominator": 1, "selection_mode": "box", "import_size_km": 2.0, "outside_region": "ocean", "min_lat": 40.70375, "max_lat": 40.72185, "min_lon": -74.01785, "max_lon": -73.99415, "polygon_lats": [], "polygon_lons": []},
+            "terrain": {"elevation_source": "procedural", "elevation_exaggeration": 1.0, "sea_level": 62, "smoothing": 1, "rocky_cliffs": true},
+            "nature": {"trees": true, "tree_density": 35, "vegetation": true, "beaches": true, "snow": true},
+            "water": {"oceans": true, "rivers": true, "lakes": true, "water_depth": 3, "wetlands": true},
+            "structures": {"buildings": true, "building_height_scale": 1.0, "building_style": "concrete", "roads": true, "road_width_scale": 1.0, "farmland": true}
+          }
+          EOF
+          cat > run/server.properties <<'EOF'
+          level-name=world
+          level-type=realworld:earth
+          online-mode=false
+          generate-structures=true
+          view-distance=4
+          simulation-distance=4
+          spawn-protection=0
+          EOF
+
+      - name: Boot server and generate spawn (max 8 minutes)
+        run: |
+          set +e
+          timeout 480 ./gradlew runServer > server-log.txt 2>&1
+          echo "server exit code: $?"
+          tail -30 server-log.txt
+
+      - name: Verify Earth world generated
+        run: |
+          echo "--- RealWorld / Earth lines ---"
+          grep -iE "realworld|earth" server-log.txt | head -20 || true
+          echo "--- preparation / done lines ---"
+          grep -iE "Preparing level|Preparing start region|Done \(|Starting minecraft server" server-log.txt | head -10 || true
+          test -f run/world/level.dat && echo "level.dat exists: OK"
+          grep -q "RealWorld initialised" server-log.txt
+          grep -q "Earth generator active" server-log.txt
+          grep -qE "Done \([0-9.]+s\)!" server-log.txt
+          python3 - <<'PYEOF'
+          import gzip, sys
+          data = gzip.open('run/world/level.dat','rb').read()
+          assert b'realworld:earth' in data, 'level.dat does not reference the realworld:earth generator!'
+          print('level.dat references realworld:earth generator: OK')
+          PYEOF
+          if grep -qiE "Failed to load datapack|Couldn't parse|Failed to parse|Invalid or missing recipe|ERROR.*realworld" server-log.txt; then
+            echo "Suspicious datapack/parse errors found:"
+            grep -iE "Failed to load datapack|Couldn't parse|Failed to parse|ERROR.*realworld" server-log.txt | head -20
+            exit 1
+          fi
+          echo "SMOKE TEST PASSED"

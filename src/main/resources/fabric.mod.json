@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "realworld",
+	"version": "${version}",
+	"name": "Real World",
+	"description": "Import real places on Earth into Minecraft: pick an area on OpenStreetMap (box or lasso), set the scale (1:1 and more), and generate real terrain, water, trees, roads and buildings. Adds an 'Earth' world type with 27 settings in 5 categories.",
+	"authors": ["Real-World contributors"],
+	"contact": {
+		"sources": "https://github.com/MinLOL12/Real-World"
+	},
+	"license": "MIT",
+	"icon": "assets/realworld/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["dev.realworld.RealWorldMod"],
+		"client": ["dev.realworld.client.RealWorldClient"]
+	},
+	"mixins": ["realworld.mixins.json"],
+	"depends": {
+		"fabricloader": ">=0.14.22",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*"
+	}
+}

@@ -1,0 +1,23 @@
+# Gradle
+.gradle/
+build/
+out/
+
+# Fabric / Minecraft
+run/
+run-data/
+realworld-cache/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.eclipse/
+.classpath
+.project
+.settings/
+bin/
+
+# OS
+.DS_Store
+*.log
