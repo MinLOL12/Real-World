@@ -29,7 +29,19 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build with Gradle
-        run: ./gradlew build --stacktrace
+        run: |
+          set +e
+          ./gradlew build --stacktrace 2>&1 | tee build-output.txt
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            {
+              echo '## Gradle build failed - relevant output'
+              echo '```text'
+              grep -E "error:|warning:|FAILED|What went wrong|Execution failed|Caused by|\.java" build-output.txt | head -150
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit $code
 
       - name: Show built jars
         run: ls -la build/libs
